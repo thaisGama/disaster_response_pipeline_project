@@ -9,6 +9,28 @@ from nltk.stem import WordNetLemmatizer
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.model_selection import train_test_split
+
+
+class StartingVerbExtractor(BaseEstimator, TransformerMixin):
+    def starting_verb(self, text):
+        sentences = sent_tokenize(text)
+
+        for sentence in sentences:
+            pos_tags = nltk.pos_tag(tokenize(sentence))
+            first_word, first_tag = pos_tags
+
+            if first_tag in ['VB', 'VBP'] or first_word=='RT':
+                return True
+        return False
+
+    def fit(self, x, y=None):
+        return self
+
+    def transform(self, X):
+        X_tagged = pd.Series(X).apply(self.starting_verb)
+        return pd.DataFrame(X_tagged)
 
 
 def load_data(database_filepath):

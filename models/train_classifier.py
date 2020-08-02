@@ -59,11 +59,11 @@ def load_data(database_filepath):
     engine = create_engine(f'sqlite:///{database_filepath}')
 
     df = pd.read_sql('SELECT * FROM CategorizedMsgs', con=engine)
-
     x = df.message
-    y = df.drop(['message', 'categories', 'id', 'original', 'genre'], inplace=True)
+    y = df.drop(columns=['id', 'message', 'original', 'genre'])
+    category_names = list(y)
 
-    return x, y
+    return x, y, category_names
 
 
 def tokenize(text):

@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 
 import re
 import nltk
-nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger', 'stopwords'])
+#nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger', 'stopwords'])
 from nltk.tokenize import word_tokenize, sent_tokenize, RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -12,8 +12,9 @@ from nltk.corpus import stopwords
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
+from sklearn.metrics import classification_report
 
 url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 not_text_regex = '[^a-zA-Z0-9]'
@@ -47,21 +48,29 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
 
 
 class ModelSelector(BaseEstimator):
-    def __init__(self, classifier: str = 'RandomForestClassifier'):
-        self.classifier = classifier
+    def __init__(
+            self,
+            estimator=RandomForestClassifier(),
+    ):
+        """
+        A Custom BaseEstimator that can switch between classifiers.
+        :param estimator: sklearn object - The classifier
+        """
 
-    def fit(self, X, y=None):
-        if self.classifier == 'RandomForestClassifier':
-            self.classifier_ = RandomForestClassifier()
-        elif self.classifier == 'ExtraTreesClassifier':
-            self.classifier_ = ExtraTreesClassifier()
-        else:
-            raise ValueError(
-                'Unknown Classifier. Allowed classifiers are RandomForestClassifier or ExtraTreesClassifier')
-        self.classifier_.fit(X, y)
+        self.estimator = estimator
+
+    def fit(self, X, y=None, **kwargs):
+        self.estimator.fit(X, y)
+        return self
 
     def predict(self, X, y=None):
-        return self.classifier_.predict(X)
+        return self.estimator.predict(X)
+
+    def predict_proba(self, X):
+        return self.estimator.predict_proba(X)
+
+    def score(self, X, y):
+        return self.estimator.score(X, y)
 
 
 def load_data(database_filepath):
@@ -80,7 +89,7 @@ def tokenize(text):
     for url in detected_urls:
         text = text.replace(url, 'urlplaceholder')
 
-    text = re.sub('[^a-zA-Z0-9]', ' ', text)
+    text = re.sub(not_text_regex, ' ', text)
     tokens = word_tokenize(text)
 
     stop_words = stopwords.words('english')
@@ -100,16 +109,24 @@ def build_model():
                          ('clf', ModelSelector())
 
                          ])
-    # print(pipeline.get_params())
+    print(pipeline.get_params())
 
     parameters = {
-
+        'clf__estimator': [RandomForestClassifier(), ExtraTreesClassifier()],
+        'clf__estimator__class_weight': ['balanced', 'balanced_subsample'],
+        'clf__estimator__n_jobs': [-1],
+        'clf__estimator__n_estimators': [100, 1000]
     }
-
-    return pipeline # TODO cv!!
+    cv_pipeline = GridSearchCV(estimator=pipeline, param_grid=parameters, cv=5)
+    return cv_pipeline
 
 def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+    y_pred = model.predict(X_test)
+    df_pred = pd.DataFrame(y_pred, columns=category_names)
+
+    for col in category_names:
+        print(classification_report(Y_test[col].values, df_pred[col].values))
+
 
 
 def save_model(model, model_filepath):

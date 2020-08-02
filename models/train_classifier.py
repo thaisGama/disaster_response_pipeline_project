@@ -45,7 +45,7 @@ class ModelSelector(BaseEstimator):
         if self.classifier == 'RandomForestClassifier':
             self.classifier_ = RandomForestClassifier()
         elif self.classifier == 'ExtraTreesClassifier':
-            self.classifier_ = ExtraTreesClassifier
+            self.classifier_ = ExtraTreesClassifier()
         else:
             raise ValueError(
                 'Unknown Classifier. Allowed classifiers are RandomForestClassifier or ExtraTreesClassifier')
@@ -67,7 +67,8 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
-    text = re.sub('[^a-zA-Z0-9]', ' ', text)
+    text = re.sub("[^a-zA-Z0-9]", ' ', text)
+    # print(f"text!!! {text}")
     tokens = word_tokenize(text)
 
     lemmatizer = WordNetLemmatizer()

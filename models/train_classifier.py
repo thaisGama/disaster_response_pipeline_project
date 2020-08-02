@@ -4,9 +4,10 @@ from sqlalchemy import create_engine
 
 import re
 import nltk
-nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger'])
+nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger', 'stopwords'])
 from nltk.tokenize import word_tokenize, sent_tokenize, RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.pipeline import Pipeline, FeatureUnion
@@ -16,6 +17,7 @@ from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
 url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 
+
 class StartingVerbExtractor(BaseEstimator, TransformerMixin):
     def starting_verb(self, text):
         sentences = sent_tokenize(text)
@@ -23,7 +25,7 @@ class StartingVerbExtractor(BaseEstimator, TransformerMixin):
         for sentence in sentences:
             if not regexTokenizer.tokenize(sentence):
                 return False
-            print(f"sentence!!!: {sentence}")
+            # print(f"sentence!!!: {sentence}")
             pos_tags = nltk.pos_tag(tokenize(sentence))
             first_word, first_tag = pos_tags[0]
             if first_tag in ['VB', 'VBP'] or first_word == 'RT':
@@ -75,10 +77,9 @@ def tokenize(text):
     text = re.sub('[^a-zA-Z0-9]', ' ', text)
     tokens = word_tokenize(text)
 
+    stop_words = stopwords.words('english')
     lemmatizer = WordNetLemmatizer()
-    clean_tokens = [lemmatizer.lemmatize(token).lower().strip() for token in tokens]
-    print(clean_tokens)
-    # TODO check if lemmatizer/CountVectorizer removes stopwords!!!
+    clean_tokens = [lemmatizer.lemmatize(token).lower().strip() for token in tokens if token not in stop_words]
     return clean_tokens
 
 
@@ -93,7 +94,7 @@ def build_model():
                          ('clf', ModelSelector())
 
                          ])
-    print(pipeline.get_params())
+    # print(pipeline.get_params())
 
     parameters = {
 

@@ -14,6 +14,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
+url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 
 class StartingVerbExtractor(BaseEstimator, TransformerMixin):
     def starting_verb(self, text):
@@ -67,14 +68,17 @@ def load_data(database_filepath):
 
 
 def tokenize(text):
-    text = re.sub("[^a-zA-Z0-9]", ' ', text)
-    # print(f"text!!! {text}")
+    detected_urls = re.findall(url_regex, text)
+    for url in detected_urls:
+        text = text.replace(url, 'urlplaceholder')
+
+    text = re.sub('[^a-zA-Z0-9]', ' ', text)
     tokens = word_tokenize(text)
 
     lemmatizer = WordNetLemmatizer()
-
     clean_tokens = [lemmatizer.lemmatize(token).lower().strip() for token in tokens]
-    # TODO check if lemmatizer/CountVectorizer remove stopwords!!!
+    print(clean_tokens)
+    # TODO check if lemmatizer/CountVectorizer removes stopwords!!!
     return clean_tokens
 
 

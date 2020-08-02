@@ -16,20 +16,26 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
 url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+not_text_regex = '[^a-zA-Z0-9]'
 
 
 class StartingVerbExtractor(BaseEstimator, TransformerMixin):
     def starting_verb(self, text):
-        sentences = sent_tokenize(text)
+        # TODO figure out why wrong pos_tag [] sentence: what should i do
+        sentence_list = nltk.sent_tokenize(text)
+
         regexTokenizer = RegexpTokenizer(r'\w+')
-        for sentence in sentences:
-            if not regexTokenizer.tokenize(sentence):
+
+        for sentence in sentence_list:
+            sentence = re.sub(not_text_regex, ' ', sentence).strip()
+            if not regexTokenizer.tokenize(sentence.strip()):
                 return False
-            # print(f"sentence!!!: {sentence}")
-            pos_tags = nltk.pos_tag(tokenize(sentence))
-            first_word, first_tag = pos_tags[0]
-            if first_tag in ['VB', 'VBP'] or first_word == 'RT':
-                return True
+
+            pos_tags = nltk.pos_tag(tokenize(sentence.strip()))
+            if pos_tags:
+                first_word, first_tag = pos_tags[0]
+                if first_tag in ['VB', 'VBP'] or first_word == 'RT':
+                    return True
         return False
 
     def fit(self, x, y=None):

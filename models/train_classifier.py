@@ -4,7 +4,8 @@ from sqlalchemy import create_engine
 
 import re
 import nltk
-from nltk.tokenize import word_tokenize, sent_tokenize
+nltk.download(['punkt', 'wordnet', 'averaged_perceptron_tagger'])
+from nltk.tokenize import word_tokenize, sent_tokenize, RegexpTokenizer
 from nltk.stem import WordNetLemmatizer
 
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
@@ -17,11 +18,13 @@ from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 class StartingVerbExtractor(BaseEstimator, TransformerMixin):
     def starting_verb(self, text):
         sentences = sent_tokenize(text)
-
+        regexTokenizer = RegexpTokenizer(r'\w+')
         for sentence in sentences:
+            if not regexTokenizer.tokenize(sentence):
+                return False
+            print(f"sentence!!!: {sentence}")
             pos_tags = nltk.pos_tag(tokenize(sentence))
-            first_word, first_tag = pos_tags
-
+            first_word, first_tag = pos_tags[0]
             if first_tag in ['VB', 'VBP'] or first_word == 'RT':
                 return True
         return False
@@ -85,7 +88,13 @@ def build_model():
                          ('clf', ModelSelector())
 
                          ])
+    print(pipeline.get_params())
 
+    parameters = {
+
+    }
+
+    return pipeline # TODO cv!!
 
 def evaluate_model(model, X_test, Y_test, category_names):
     pass

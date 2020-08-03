@@ -15,8 +15,13 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import LinearSVC
 from sklearn.metrics import classification_report
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.feature_selection import SelectFromModel
+
+import pickle
 
 url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 not_text_regex = '[^a-zA-Z0-9]'
@@ -108,13 +113,16 @@ def build_model():
         ])),
         ('starting_verb', StartingVerbExtractor())
     ])),
+                         ('feature_selection', SelectFromModel(ExtraTreesClassifier())),
                          ('clf', MultiOutputClassifier(ModelSelector()))
-
                          ])
     print(pipeline.get_params())
 
     parameters = {
-        'clf__estimator__estimator': [RandomForestClassifier(), ExtraTreesClassifier()],
+        'clf__estimator__estimator': [RandomForestClassifier(n_estimators=100, class_weight="balanced", n_jobs=-1),
+                                      ExtraTreesClassifier(n_estimators=100, class_weight="balanced", n_jobs=-1),
+                                      LinearSVC(), LogisticRegression()
+                                      ],
         'clf__estimator__estimator__class_weight': ['balanced', 'balanced_subsample'],
         'clf__estimator__estimator__n_jobs': [-1],
         'clf__estimator__estimator__n_estimators': [100, 1000]
@@ -134,7 +142,9 @@ def evaluate_model(model, X_test, Y_test, category_names):
 
 
 def save_model(model, model_filepath):
-    pass
+    outfile = open(model_filepath, 'wb')
+    pickle.dump(model, outfile)
+    outfile.close()
 
 
 def main():
@@ -149,7 +159,9 @@ def main():
         model = build_model()
 
         print('Training model...')
+        start_train = time.time()
         model.fit(X_train, Y_train)
+        print(f'Build model time minutes: {(time.time() - start_train)/60}')
 
         print('Evaluating model...')
         evaluate_model(model, X_test, Y_test, category_names)
@@ -164,7 +176,7 @@ def main():
               'as the first argument and the filepath of the pickle file to ' \
               'save the model to as the second argument. \n\nExample: python ' \
               'train_classifier.py ../data/DisasterResponse.db classifier.pkl')
-    print(f"total time: {time.time() - start}")
+    print(f"total time minutes: {(time.time() - start)/60}")
 
 
 if __name__ == '__main__':

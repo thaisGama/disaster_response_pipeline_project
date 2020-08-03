@@ -1,6 +1,7 @@
 import sys
 import pandas as pd
 from sqlalchemy import create_engine
+import time
 
 import re
 import nltk
@@ -15,6 +16,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 from sklearn.metrics import classification_report
+from sklearn.multioutput import MultiOutputClassifier
 
 url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
 not_text_regex = '[^a-zA-Z0-9]'
@@ -106,22 +108,24 @@ def build_model():
         ])),
         ('starting_verb', StartingVerbExtractor())
     ])),
-                         ('clf', ModelSelector())
+                         ('clf', MultiOutputClassifier(ModelSelector()))
 
                          ])
     print(pipeline.get_params())
 
     parameters = {
-        'clf__estimator': [RandomForestClassifier(), ExtraTreesClassifier()],
-        'clf__estimator__class_weight': ['balanced', 'balanced_subsample'],
-        'clf__estimator__n_jobs': [-1],
-        'clf__estimator__n_estimators': [100, 1000]
+        'clf__estimator__estimator': [RandomForestClassifier(), ExtraTreesClassifier()],
+        'clf__estimator__estimator__class_weight': ['balanced', 'balanced_subsample'],
+        'clf__estimator__estimator__n_jobs': [-1],
+        'clf__estimator__estimator__n_estimators': [100, 1000]
     }
     cv_pipeline = GridSearchCV(estimator=pipeline, param_grid=parameters, cv=5)
     return cv_pipeline
 
+
 def evaluate_model(model, X_test, Y_test, category_names):
     y_pred = model.predict(X_test)
+    print("\nBest Parameters:", model.best_params_)
     df_pred = pd.DataFrame(y_pred, columns=category_names)
 
     for col in category_names:
@@ -134,6 +138,7 @@ def save_model(model, model_filepath):
 
 
 def main():
+    start = time.time()
     if len(sys.argv) == 3:
         database_filepath, model_filepath = sys.argv[1:]
         print('Loading data...\n    DATABASE: {}'.format(database_filepath))
@@ -159,6 +164,7 @@ def main():
               'as the first argument and the filepath of the pickle file to ' \
               'save the model to as the second argument. \n\nExample: python ' \
               'train_classifier.py ../data/DisasterResponse.db classifier.pkl')
+    print(f"total time: {time.time() - start}")
 
 
 if __name__ == '__main__':

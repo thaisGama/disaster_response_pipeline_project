@@ -21,12 +21,6 @@ def clean_data(df):
     for col in col_names:
         categories_df[col] = pd.to_numeric(categories_df[col].astype(str).str[-1])
 
-    # eliminate cols with single value
-    numeric_cols = categories_df.select_dtypes([np.number]).columns
-    stdev = categories_df[numeric_cols].std()
-    drop_cols = stdev[stdev == 0].index
-    categories_df.drop(columns=drop_cols, inplace=True)
-
     # replace 2's in related by 1's - TODO investigate further (does it improve ML algo performance?)
     categories_df.loc[categories_df.related == 2] = 1
 
@@ -36,6 +30,7 @@ def clean_data(df):
 
     # drop duplicated instances
     df.drop_duplicates(inplace=True)
+    print(f"shape in cleann_data: {df.shape}")
 
     return df
 
@@ -44,6 +39,7 @@ def save_data(df, database_filename):
     engine = create_engine(f'sqlite:///{database_filename}')
     table_name = 'CategorizedMsgs'
     sql.execute(f'DROP TABLE IF EXISTS {table_name}', engine)
+    print(df.shape)
     df.to_sql(table_name, engine, index=False)
 
 

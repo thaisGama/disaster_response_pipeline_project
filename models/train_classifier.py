@@ -124,11 +124,6 @@ def build_model():
             #'features__text_pipeline__vect__max_features': (None, 5000, 10000),
             'features__text_pipeline__tfidf__use_idf': (True, False),
             'clf__estimator__estimator': [LinearSVC()],
-            # 'clf__estimator__estimator__class_weight': ['balanced', None],
-            # 'clf__estimator__estimator__C': [10, 100, 1000],
-            # 'clf__estimator__estimator__penalty': ('l2', 'l1'),
-            # #'clf__estimator__estimator__max_iter': [50, 80, 1000],
-            # 'clf__estimator__estimator__loss': ['hinge', 'squared_hinge'],
         },
         {
             'clf__estimator__estimator': [RandomForestClassifier()],

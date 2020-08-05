@@ -113,20 +113,36 @@ def build_model():
         ])),
         ('starting_verb', StartingVerbExtractor())
     ])),
-                         ('feature_selection', SelectFromModel(ExtraTreesClassifier())),
+                         ('feature_selection', SelectFromModel(ExtraTreesClassifier(n_estimators=100))),
                          ('clf', MultiOutputClassifier(ModelSelector()))
                          ])
     print(pipeline.get_params())
 
-    parameters = {
-        'clf__estimator__estimator': [RandomForestClassifier(n_estimators=100, class_weight="balanced", n_jobs=-1),
-                                      ExtraTreesClassifier(n_estimators=100, class_weight="balanced", n_jobs=-1),
-                                      LinearSVC(), LogisticRegression()
-                                      ],
-        'clf__estimator__estimator__class_weight': ['balanced', 'balanced_subsample'],
-        'clf__estimator__estimator__n_jobs': [-1],
-        'clf__estimator__estimator__n_estimators': [100, 1000]
+    parameters = [
+        {'features__text_pipeline__vect__ngram_range': ((1, 1), (1, 2)),
+            'features__text_pipeline__vect__max_df': (0.5, 0.75, 1.0),
+            #'features__text_pipeline__vect__max_features': (None, 5000, 10000),
+            'features__text_pipeline__tfidf__use_idf': (True, False),
+            'clf__estimator__estimator': [LinearSVC()],
+            # 'clf__estimator__estimator__class_weight': ['balanced', None],
+            # 'clf__estimator__estimator__C': [10, 100, 1000],
+            # 'clf__estimator__estimator__penalty': ('l2', 'l1'),
+            # #'clf__estimator__estimator__max_iter': [50, 80, 1000],
+            # 'clf__estimator__estimator__loss': ['hinge', 'squared_hinge'],
+        },
+        {
+            'clf__estimator__estimator': [RandomForestClassifier()],
+            'clf__estimator__estimator__class_weight': ['balanced', 'balanced_subsample'],
+            'clf__estimator__estimator__n_estimators': [1, 10, 100, 1000],
+            'clf__estimator__estimator__n_jobs': [-1],
+        },
+        {
+            'clf__estimator__estimator': [ExtraTreesClassifier()],
+            'clf__estimator__estimator__class_weight': ['balanced', 'balanced_subsample'],
+            'clf__estimator__estimator__n_estimators': [10, 100, 1000],
+            'clf__estimator__estimator__n_jobs': [-1]
     }
+    ]
     cv_pipeline = GridSearchCV(estimator=pipeline, param_grid=parameters, cv=5)
     return cv_pipeline
 

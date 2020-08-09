@@ -9,10 +9,70 @@ from flask import Flask
 from flask import render_template, request, jsonify
 from plotly.graph_objs import Bar
 import joblib
+
 from sqlalchemy import create_engine
+
+import re
+import nltk
+from nltk.tokenize import word_tokenize, RegexpTokenizer
+from nltk.stem import WordNetLemmatizer
+
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.ensemble import RandomForestClassifier
+
+# TODO instead of redifining StartingVerbExtractor and ModelSelector here, try to solve error via import
+not_text_regex = '[^a-zA-Z0-9]'
 
 
 app = Flask(__name__)
+
+
+class StartingVerbExtractor(BaseEstimator, TransformerMixin):
+    def starting_verb(self, text):
+        # TODO figure out why wrong pos_tag [] sentence: what should i do
+        sentence_list = nltk.sent_tokenize(text)
+
+        regexTokenizer = RegexpTokenizer(r'\w+')
+
+        for sentence in sentence_list:
+            sentence = re.sub(not_text_regex, ' ', sentence).strip()
+            if not regexTokenizer.tokenize(sentence.strip()):
+                return False
+
+            pos_tags = nltk.pos_tag(tokenize(sentence.strip()))
+            if pos_tags:
+                first_word, first_tag = pos_tags[0]
+                if first_tag in ['VB', 'VBP'] or first_word == 'RT':
+                    return True
+        return False
+
+class ModelSelector(BaseEstimator):
+    def __init__(
+            self,
+            estimator=RandomForestClassifier(),
+    ):
+        """
+        A Custom BaseEstimator that can switch between classifiers.
+        :param estimator: sklearn object - The classifier
+        """
+
+        self.estimator = estimator
+
+    def fit(self, X, y=None, **kwargs):
+        self.estimator.fit(X, y)
+        return self
+
+    def predict(self, X, y=None):
+        return self.estimator.predict(X)
+
+    def predict_proba(self, X):
+        return self.estimator.predict_proba(X)
+
+    def score(self, X, y):
+        return self.estimator.score(X, y)
+
+
+
 
 def tokenize(text):
     tokens = word_tokenize(text)
